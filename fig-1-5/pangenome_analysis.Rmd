@@ -1,0 +1,136 @@
+---
+title: "pangenome_analysis"
+output: html_document
+date: "2024-08-28"
+---
+
+```{r}
+library(ggpubr)
+library(pheatmap)
+library(ape)
+library(dplyr)
+```
+
+```{r}
+pre_abs = read.table(file = "gene_presence_absence.Rtab", header = T, row.names = 1)
+colnames(pre_abs)[which(colnames(pre_abs) == "B.rum_GCA000741365")] = "B.rum_GCA_000741365"
+```
+
+```{r}
+cluster_key = read.table(file = "gene_key.txt")
+colnames(cluster_key) = c("group", "rep_gene")
+```
+
+```{r}
+annotation = read.table(file = "MM_bieocvy3.emapper.annotations.tsv", header = T, sep = "\t")
+colnames(annotation)[1] = "rep_gene"
+
+gene_cluster_info = left_join(cluster_key, annotation, by = "rep_gene")
+```
+
+# Tree
+
+```{r}
+tree = read.tree(file = "../tree/bif_tree.nwk.txt")
+tree_tips = tree$tip.label
+```
+
+# Pull out Cazymes
+
+```{r}
+pre_abs_ado = pre_abs[, grepl("ado", colnames(pre_abs))]
+pre_abs_other = pre_abs[, !grepl("ado", colnames(pre_abs))]
+
+unique_to_ado = pre_abs[which(rowSums(pre_abs_ado) > 17 & rowSums(pre_abs_other) == 0),]
+```
+
+# Get the annotations of these genes
+
+```{r}
+genes_defining_ado = gene_cluster_info[which(gene_cluster_info$group %in% rownames(unique_to_ado)),]
+cazy_def_ado = genes_defining_ado[which(genes_defining_ado$CAZy != "-"),]
+caz_pfam_ado = cazy_def_ado[,c(20,22)]
+rownames(caz_pfam_ado) = NULL
+```
+
+```{r}
+library(kableExtra)
+kab_tab = kable(caz_pfam_ado, caption = "B.adolescentis unique CAZymes") %>%
+  kable_styling(full_width = F, position = "left", latex_options = "striped", stripe_color = "gray")
+
+# save caz_pfam_ado as a tbale
+write.table(caz_pfam_ado, file = "caz_pfam_ado.tab", quote = F, sep = "\t", row.names = F, col.names = T)
+
+```
+
+```{r, fig.width=16, fig.height=6}
+# Heatmap of CAZymes highlight bifido ado
+library(pheatmap)
+library(dplyr)
+library(stringr)
+
+genes_core_ado = gene_cluster_info[which(gene_cluster_info$group %in% rownames(pre_abs)),]
+cazy_core_ado = genes_core_ado[which(genes_core_ado$CAZy != "-"),]
+all_genome_just_cazymes = pre_abs[cazy_core_ado$group,]
+all_genome_just_cazymes_t = t(all_genome_just_cazymes)
+phyloGenomes = gsub("'", "", tree_tips)
+
+# Order genomes by tree
+all_genome_just_cazymes_physorted = all_genome_just_cazymes_t[phyloGenomes,]
+all_genome_just_cazymes_physorted[grep("ado", rownames(all_genome_just_cazymes_physorted)), which(colnames(all_genome_just_cazymes_physorted) %in% rownames(unique_to_ado))] = 2
+
+# Remove ruminatum due to identification of it as a miss-assignment
+all_genome_just_cazymes_physorted = all_genome_just_cazymes_physorted[!grepl("rum", rownames(all_genome_just_cazymes_physorted)),]
+
+# Species annotation bar
+heatmap_meta = data.frame(species = str_split(rownames(all_genome_just_cazymes_physorted), "_", simplify = T)[,1])
+rownames(heatmap_meta) = rownames(all_genome_just_cazymes_physorted)
+
+cols = list(species = c("B.bifidum" = "green4", "B.ado" = "purple4", "B.breve" = "pink3", "B.long" = "gold", "B.pseudo" = "blue2", "B.scardovii" = "turquoise", "B.ang" = "brown", "B.cat" = "green3"))
+
+pdf(file = "heatmap_fig3_18Dec2024.pdf", width = 16, height = 6)
+pheatmap(all_genome_just_cazymes_physorted, cluster_rows = F, color = colorRampPalette(c("black", "yellow", "red"))(100), annotation_row =  heatmap_meta, annotation_colors = cols, show_rownames = F, legend = F, show_colnames = F)
+dev.off()
+```
+
+# GABA genes
+
+```{r}
+outDf = t(rbind(sample = names(pre_abs), pre_abs["gadA",], pre_abs["gadC",], species = str_split(names(pre_abs), pattern = "_", simplify = T)[,1], genome = paste("GC", str_split(names(pre_abs), pattern = "_", simplify = T)[,3], sep = "")))
+
+df = as.data.frame(outDf, row.names = F)
+write.table(df, file = "tree_annotation.tab", quote = F, sep = "\t", row.names = F, col.names = T)
+```
+
+# Add columns to phylogenetic tree
+
+```{r}
+#install.packages("ggtree")
+#install.packages("ggplot2")
+#install.packages("dplyr")
+library(ggtree)
+library(ggplot2)
+library(dplyr)
+
+heatmap_data <- data.frame(
+  tip_label = tree$tip.label,
+  Category1 = sample(c("A", "B", "C"), length(tree$tip.label), replace = TRUE),
+  Category2 = sample(c("X", "Y", "Z"), length(tree$tip.label), replace = TRUE),
+  Category3 = sample(c("L", "M", "N"), length(tree$tip.label), replace = TRUE)
+)
+
+# Plot the tree
+p <- ggtree(tree) + geom_tiplab()
+
+# Convert heatmap data to long format for ggplot2
+heatmap_data_long <- df %>%
+  pivot_longer(cols = -sample, names_to = "Category", values_to = "Value")
+
+# Add the heatmap
+p + geom_tile(data = heatmap_data_long, aes(x = Category, y = tip_label, fill = Value)) +
+  scale_fill_manual(values = c("A" = "red", "B" = "blue", "C" = "green", 
+                               "X" = "yellow", "Y" = "purple", "Z" = "orange",
+                               "L" = "pink", "M" = "cyan", "N" = "brown")) +
+  theme_tree2() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
