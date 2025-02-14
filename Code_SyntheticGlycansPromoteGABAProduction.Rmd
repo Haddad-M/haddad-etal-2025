@@ -46,7 +46,7 @@ count_zeros = function(column) {
 # Import files 
 metadata = read.csv("metadata.csv", header = TRUE)
 metadata$donor = as.factor(metadata$donor)
-biomass = read.csv("biomass-diff.csv", header = TRUE)
+biomass = read.csv("biomass_diff.csv", header = TRUE)
 species_adjusted_readCounts = read.csv("species_abunds.csv", header = TRUE, row.names = 1) # 1 media well lost; 143 cols
 ```
 
@@ -812,8 +812,8 @@ species_sgglc = abs_species_holistic[which(abs_species_holistic$condition == "sg
 species_sgglc$gaba
 ggplot(species_sgglc, aes(x = gaba)) + geom_histogram()
 
-# Remove columns 1-12 and acetic, butyric, l.glutamic, lactic, propionic, pyruvic, succinic, valeric
-species_sgglc_subset = subset(species_sgglc, select = -c(1:12, acetic, butyric, l.glutamic, lactic, propionic, pyruvic, succinic, valeric))
+# Remove columns 1-12
+species_sgglc_subset = subset(species_sgglc, select = -c(1:12))
 
 # Subset species_sg-glc_subset to include columns containing "gaba", "bacteroides", "bifidobacterium", "lactobacillus", and "streptococcus"
 species_sgglc_subset = species_sgglc_subset[,c(grep("gaba", colnames(species_sgglc_subset)), grep("Bifidobacterium", colnames(species_sgglc_subset)), grep("Lactobacillus", colnames(species_sgglc_subset)), grep("Streptococcus", colnames(species_sgglc_subset)), grep("Bacteroides", colnames(species_sgglc_subset)))]
