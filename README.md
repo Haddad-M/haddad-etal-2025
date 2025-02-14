@@ -7,4 +7,4 @@ This work demonstrates the selective impact of a synthetic glycan on the modulat
 
 # Components
 
-The repository contains the primary R Markdown (.rmd) file used for analysis in the paper along with .csv files of sequencing, metabolomics, and fermentation data. 
+The folder fig-2-3-4 contains the primary R Markdown (.rmd) file used for analysis in the paper along with .csv files of sequencing, metabolomics, and biomass data. 
