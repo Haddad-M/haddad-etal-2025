@@ -247,12 +247,6 @@ targeted_metabolomics = read.csv("targeted_metabolomics.csv", header = TRUE)
 
 # Join to metadata
 targeted_metabolomics_meta = left_join(metadata, targeted_metabolomics, by = "metabolomics_id")
-
-# Boxplot of each metabolite by treatment
-for(mol in colnames(targeted_metabolomics)[2:10]){
-    plot(ggboxplot(targeted_metabolomics_meta, x = "treatment", y = mol, xlab = "Treatment", ylab = "mg/mL", title = paste("Concentration of", mol, "by treatment")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
-    )
-}
 ```
 
 ## Now I have relative abundances & absolute abundances by species and genus. I also have targeted metabolomics. 
